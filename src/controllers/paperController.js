@@ -3,6 +3,7 @@ const PDFDocument = require('pdfkit');
 const Paper = require('../models/paper');
 const { Sequelize } = require('sequelize');
 const path = require('path');
+const PaperFormate = require('../models/PaperFormate');
 const FONTS = {
   hindi: path.join(__dirname, '../fonts/NotoSansDevanagari-Regular.ttf'),
   gujarati: path.join(__dirname, '../fonts/NotoSansGujarati-Regular.ttf'),
@@ -487,7 +488,7 @@ const generatePaper_working = async (req, res) => {
   }
 };
 
-const generatePaper = async (req, res) => {
+const generatePaper_31032025 = async (req, res) => {
   try {
     const { 
       board,
@@ -500,6 +501,7 @@ const generatePaper = async (req, res) => {
       mcqCount, 
       shortCount, 
       longCount, 
+      examDate,
       totalMarks, 
       includeAnswers,
       schoolName,
@@ -714,6 +716,7 @@ const generatePaper = async (req, res) => {
       class: selectedClass,
       language,
       schoolLogo,
+      examDate,
       ...(useDifficultyDistribution && { difficultyDistribution: JSON.stringify(difficultyDistribution) }),
       createdBy: req.user.id
     });
@@ -917,6 +920,267 @@ const generatePaper = async (req, res) => {
 };
 
 
+const generatePaper = async (req, res) => {
+  try {
+    const { 
+      board,
+      boardId,
+      subjectsId,
+      chaptersId,
+      subjects, 
+      chapters, 
+      difficulty,
+      mcqCount, 
+      shortCount, 
+      longCount, 
+      examDate,
+      totalMarks, 
+      includeAnswers,
+      schoolName,
+      schoolLogo,
+      examName,
+      duration,
+      mcqMarks,
+      shortMarks,
+      longMarks,
+      useDifficultyDistribution,
+      difficultyDistribution,
+      selectedClass,
+      language,
+    } = req.body;
+ // Variables to store questions of different types
+ let mcqQuestions = [];
+ let shortQuestions = [];
+ let longQuestions = [];
+
+ // If using difficulty distribution, fetch questions with different approach
+ if (difficulty === 'all' && useDifficultyDistribution && difficultyDistribution) {
+   // Calculate how many questions of each difficulty to fetch
+   const mcqEasyCount = Math.floor(mcqCount * (difficultyDistribution.easy / 100));
+   const mcqMediumCount = Math.floor(mcqCount * (difficultyDistribution.medium / 100));
+   const mcqHardCount = Math.ceil(mcqCount * (difficultyDistribution.hard / 100));
+   
+   const shortEasyCount = Math.floor(shortCount * (difficultyDistribution.easy / 100));
+   const shortMediumCount = Math.floor(shortCount * (difficultyDistribution.medium / 100));
+   const shortHardCount = Math.ceil(shortCount * (difficultyDistribution.hard / 100));
+   
+   const longEasyCount = Math.floor(longCount * (difficultyDistribution.easy / 100));
+   const longMediumCount = Math.floor(longCount * (difficultyDistribution.medium / 100));
+   const longHardCount = Math.ceil(longCount * (difficultyDistribution.hard / 100));
+   
+   // Fetch MCQ questions with different difficulties
+   const mcqEasy = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'MCQ',
+       difficulty: 'easy',
+       class: selectedClass
+     },
+     limit: mcqEasyCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   const mcqMedium = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'MCQ',
+       difficulty: 'medium',
+       class: selectedClass
+     },
+     limit: mcqMediumCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   const mcqHard = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'MCQ',
+       difficulty: 'hard',
+       class: selectedClass
+     },
+     limit: mcqHardCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   // Fetch SHORT questions with different difficulties
+   const shortEasy = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'SHORT',
+       difficulty: 'easy',
+       class: selectedClass
+     },
+     limit: shortEasyCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   const shortMedium = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'SHORT',
+       difficulty: 'medium',
+       class: selectedClass
+     },
+     limit: shortMediumCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   const shortHard = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'SHORT',
+       difficulty: 'hard',
+       class: selectedClass
+     },
+     limit: shortHardCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   // Fetch LONG questions with different difficulties
+   const longEasy = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'LONG',
+       difficulty: 'easy',
+       class: selectedClass
+     },
+     limit: longEasyCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   const longMedium = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'LONG',
+       difficulty: 'medium',
+       class: selectedClass
+     },
+     limit: longMediumCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   const longHard = await Question.findAll({
+     where: {
+      board: boardId,
+      subject: subjectsId,
+      chapter: chaptersId,
+       questionType: 'LONG',
+       difficulty: 'hard',
+       class: selectedClass
+     },
+     limit: longHardCount,
+     order: Sequelize.literal('RANDOM()')
+   });
+   
+   // Combine questions of different difficulties
+   mcqQuestions = [...mcqEasy, ...mcqMedium, ...mcqHard];
+   shortQuestions = [...shortEasy, ...shortMedium, ...shortHard];
+   longQuestions = [...longEasy, ...longMedium, ...longHard];
+ } else {
+    // Fetch questions based on criteria and type (keeping your existing code)
+    mcqQuestions = await Question.findAll({
+      where: {
+        board: boardId,
+        subject: subjectsId,
+        chapter: chaptersId,
+        questionType: 'MCQ',
+        ...(difficulty !== 'all' && { difficulty }),
+        class: selectedClass
+      },
+      limit: mcqCount
+    });
+
+    shortQuestions = await Question.findAll({
+      where: {
+        board: boardId,
+        subject: subjectsId,
+        chapter: chaptersId,
+        questionType: 'SHORT',
+        ...(difficulty !== 'all' && { difficulty }),
+        class: selectedClass
+      },
+      limit: shortCount
+    });
+
+    longQuestions = await Question.findAll({
+      where: {
+        board: boardId,
+        subject: subjectsId,
+        chapter: chaptersId,
+        questionType: 'LONG',
+        ...(difficulty !== 'all' && { difficulty }),
+        class: selectedClass
+      },
+      limit: longCount
+    });
+  }
+    const paper = await Paper.create({
+      board,
+      subjects,
+      chapters,
+      difficulty,
+      mcqCount,
+      shortCount,
+      longCount,
+      totalMarks,
+      schoolName,
+      examName,
+      duration,
+      mcqMarks,
+      shortMarks,
+      longMarks,
+      class: selectedClass,
+      language,
+      schoolLogo,
+      examDate,
+      ...(useDifficultyDistribution && { difficultyDistribution: JSON.stringify(difficultyDistribution) }),
+      createdBy: req.user.id
+    });
+
+    await Promise.all([
+      ...mcqQuestions.map(q => 
+        paper.addQuestion(q, { through: { type: 'MCQ', marks: mcqMarks } })
+      ),
+      ...shortQuestions.map(q => 
+        paper.addQuestion(q, { through: { type: 'SHORT', marks: shortMarks } })
+      ),
+      ...longQuestions.map(q => 
+        paper.addQuestion(q, { through: { type: 'LONG', marks: longMarks } })
+      )
+    ]);
+
+    res.json({
+      paper,
+      questions: {
+        mcq: mcqQuestions,
+        short: shortQuestions,
+        long: longQuestions
+      }
+    });
+    
+    
+
+  } catch (error) {
+    console.error('Paper generation error:', error);
+    res.status(500).json({ error: 'Failed to generate paper' });
+  }
+};
 const generateOnlyPaper = async (req, res) => {
   try {
     const {
@@ -3100,6 +3364,121 @@ const downloadPaper_old = async (req, res) => {
     res.status(500).json({ error: 'Failed to download paper' });
   }
 };
+const savePaperFormate = async (req, res) => {
+  try {
+    const { headerConfig, questionStyle, paperFormateID } = req.body;
+    let paperFormat;
+    console.log(`paperID:-------------------------    ${typeof(paperFormateID)}`)
+    console.log(paperFormateID);
+    if (paperFormateID && paperFormateID != -1) {
+      // Update existing format
+      [_, [paperFormat]] = await PaperFormate.update({
+        headerConfig,
+        questionStyle
+      }, {
+        where: { 
+          id: paperFormateID,
+          userId: req.user.id 
+        },
+        returning: true
+      });
+
+      if (!paperFormat) {
+        return res.status(404).json({
+          success: false,
+          message: 'Paper format not found'
+        });
+      }
+    } else {
+      // Create new format
+      paperFormat = await PaperFormate.create({
+        headerConfig,
+        questionStyle,
+        userId: req.user.id
+      });
+    }
+
+    console.log("paperFormat:-------------------------")
+    console.log(paperFormat.id);
+
+    res.status(200).json({
+      success: true,
+      message: paperFormateID != -1 ? 'Paper format updated successfully' : 'Paper format saved successfully',
+      paperID: paperFormat.id
+    });
+  } catch (error) {
+    console.error('Error saving paper format:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save paper format'
+    });
+  }
+};
+const getPaperFormats = async (req, res) => {
+  try {
+    const formats = await PaperFormate.findAll({
+      where: { userId: req.user.id },
+      attributes: ['id', 'headerConfig', 'questionStyle', 'createdAt'],
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.status(200).json({
+      success: true,
+      formats: formats
+    });
+  } catch (error) {
+    console.error('Error fetching paper formats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch paper formats'
+    });
+  }
+};
+
+const getPaperById = async (req, res) => {
+  try {
+    const paper = await Paper.findOne({
+      where: { 
+        createdBy: req.user.id, 
+        id: req.params.id 
+      },
+      include: [{
+        model: Question,
+        as: 'questions',
+        through: { attributes: ['type'] }, // Include the question type from junction table
+        attributes: [
+          'id', 
+          'question',
+          'questionImage',
+          'options',
+          'optionImages',
+          'answer',
+          'difficulty',
+          'questionType'
+        ]
+      }]
+    });
+
+    if (!paper) {
+      return res.status(404).json({ error: 'Paper not found' });
+    }
+
+    // Organize questions by type
+    const formattedPaper = {
+      ...paper.toJSON(),
+      questions: {
+        mcq: paper.questions.filter(q => q.questionType === 'MCQ'),
+        short: paper.questions.filter(q => q.questionType === 'SHORT'),
+        long: paper.questions.filter(q => q.questionType === 'LONG')
+      }
+    };
+
+    res.json(formattedPaper);
+  } catch (error) {
+    console.error('Error fetching paper:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
 module.exports = {
   generatePaper,
   createPaper,
@@ -3108,5 +3487,8 @@ module.exports = {
   deletePaper,
   getPapers,
   downloadPaper,
-  generateOnlyPaper
+  generateOnlyPaper,
+  savePaperFormate,
+  getPaperFormats,
+  getPaperById
 };

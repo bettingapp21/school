@@ -57,6 +57,10 @@ Paper.init({
     type: DataTypes.STRING,
     allowNull: true
   },
+  examDate: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   duration: {
     type: DataTypes.STRING,
     allowNull: true
